@@ -43,10 +43,117 @@ El sistema se fundamenta en una base de datos relacional diseñada para garantiz
 *   `/sql`: Scripts de creación de base de datos, vistas y procedimientos almacenados.
 *   `/src`: (Opcional) Código fuente de la interfaz o API de conexión.
 
-## Objetivos del Proyecto Universitario
-1.  Aplicar conceptos avanzados de normalización de bases de datos.
-2.  Implementar disparadores (triggers) para el control automático de stock en gramos.
-3.  Generar reportes estadísticos sobre los sabores más rentables y eficiencia de turnos.
+## Esquema de la base de datos
+### 1. Módulo de Productos e Inventario
 
-## Contribución y Desarrollo
-Este proyecto ha sido desarrollado siguiendo estándares de documentación técnica clara y precisa, enfocada en la escalabilidad y la facilidad de mantenimiento para futuros desarrolladores o administradores del sistema.
+Esta sección separa la definición del producto de su stock físico para permitir flexibilidad.
+
+**Tabla: Categorias**
+
+* id_categoria (INT, PK, AI)
+* nombre (VARCHAR): Ej. 'Artesanal', 'Comercial', 'Topping', 'Bebida'.
+
+**Tabla: Productos**
+
+* id_producto (INT, PK, AI)
+* id_categoria (FK)
+* nombre (VARCHAR)
+* descripcion (TEXT)
+* precio_base (DECIMAL 10,2): Precio de venta al público.
+* es_propio (BOOLEAN): Define si es artesanal (se mide en gramos) o comercial (unidades).
+* puntos_otorgados (INT): Cuántos puntos suma esta compra al cliente.
+
+**Tabla: Sabores**
+
+* id_sabor (INT, PK, AI)
+* nombre (VARCHAR): Ej. 'Chocolate Amargo', 'Frutilla al Agua'.
+* stock_gramos (DECIMAL 10,2): Cantidad actual en el contenedor.
+* costo_produccion_gramo (DECIMAL 10,4): Para calcular rentabilidad.
+
+### 2. Módulo de Personal y Turnos
+
+**Tabla: Empleados**
+
+* id_empleado (INT, PK, AI)
+* nombre_completo (VARCHAR)
+* tipo_contrato (ENUM): 'Medio Tiempo', 'Tiempo Completo'.
+* fecha_ingreso (DATE)
+
+**Tabla: Turnos_Definicion**
+
+* id_turno (INT, PK, AI)
+* nombre (VARCHAR): 'Mañana', 'Tarde', 'Noche'.
+* hora_inicio (TIME)
+* hora_fin (TIME)
+
+**Tabla: Asignacion_Turnos**
+
+* id_asignacion (INT, PK, AI)
+* id_empleado (FK)
+* id_turno (FK)
+* fecha (DATE)
+
+### 3. Módulo de Clientes y Fidelización
+
+**Tabla: Clientes**
+
+* id_cliente (INT, PK, AI)
+* documento_identidad (VARCHAR, Unique): CI o NIT.
+* nombre (VARCHAR)
+* puntos_acumulados (INT)
+
+**Tabla: Premios**
+
+* id_premio (INT, PK, AI)
+* descripcion (VARCHAR)
+* puntos_requeridos (INT)
+* id_producto_vinculado (FK): Para saber qué descontar del inventario al canjearlo.
+
+### 4. Módulo de Ventas y Delivery
+
+**Tabla: Ventas_Cabecera**
+
+* id_venta (INT, PK, AI)
+* id_cliente (FK, Nullable): Null si es cliente ocasional.
+* id_empleado (FK): Quién realizó la venta.
+* id_turno (FK): Turno en el que se realizó (para arqueo).
+* fecha_hora (DATETIME)
+* metodo_pago (ENUM): 'Efectivo', 'Tarjeta'.
+* canal_venta (ENUM): 'Local', 'Yango', 'PedidosYa'.
+
+**Campos de Delivery:**
+
+* monto_base (DECIMAL 10,2)
+* comision_app (DECIMAL 10,2)
+* costo_envio (DECIMAL 10,2)
+* total_final (DECIMAL 10,2)
+
+**Tabla: Ventas_Detalle**
+
+* id_detalle (INT, PK, AI)
+* id_venta (FK)
+* id_producto (FK)
+* cantidad (INT): Cantidad de unidades o envases.
+* subtotal (DECIMAL 10,2)
+
+**Tabla: Detalle_Sabores (Relación Muchos a Muchos para helados propios)**
+
+* id_detalle_sabor (INT, PK, AI)
+* id_detalle (FK): Vincula a la línea del producto (ej. el "Vaso Doble").
+* id_sabor (FK)
+* gramos_descontados (DECIMAL 10,2): Ej. 75.00.
+
+### 5. Módulo de Canjes (Premios)
+
+**Tabla: Canjes_Registro**
+
+* id_canje (INT, PK, AI)
+* id_cliente (FK)
+* id_premio (FK)
+* fecha_hora (DATETIME)
+* puntos_utilizados (INT)
+
+## DIagrama
+<p align="center">
+  <img src="docs/diagrama_db_heladeria.jpg" alt="Diagrama de la base de datos" width="600">
+</p>
