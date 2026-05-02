@@ -32,16 +32,17 @@ El proyecto nace de la necesidad de modernizar el control de stock y ventas en e
 
 El sistema se fundamenta en una base de datos relacional diseñada para garantizar la integridad referencial y la trazabilidad de cada gramo de producto.
 
-**Tecnologías Sugeridas:**
-*   **Motor de DB:** MySQL / PostgreSQL
 *   **Modelado:** Diagrama Entidad-Relación (DER) con normalización en 3FN.
 *   **Documentación:** Mermaid.js para diagramas de flujo y esquemas de tablas.
+
+**Tecnologías:**
+*   **Motor de DB:** PostgreSQL
 
 ## Estructura del Proyecto
 
 *   `/docs`: Contiene el relevamiento detallado y requisitos de software.
 *   `/sql`: Scripts de creación de base de datos, vistas y procedimientos almacenados.
-*   `/src`: (Opcional) Código fuente de la interfaz o API de conexión.
+*   `/src`: Código fuente de la interfaz o API de conexión.
 
 ## Esquema de la base de datos
 ### 1. Módulo de Productos e Inventario
@@ -153,7 +154,12 @@ Esta sección separa la definición del producto de su stock físico para permit
 * fecha_hora (DATETIME)
 * puntos_utilizados (INT)
 
-## DIagrama
+## Diagrama
 <p align="center">
   <img src="docs/diagrama_db_heladeria.jpg" alt="Diagrama de la base de datos" width="600">
+</p>
+
+## Mapeado
+<p align="center">
+  <img src="docs/mapeado_heladeria.png" alt="Diagrama de la base de datos" width="600">
 </p>
