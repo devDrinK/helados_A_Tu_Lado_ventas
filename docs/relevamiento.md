@@ -1,74 +1,76 @@
 # Especificación Técnica de Relevamiento - Heladería "A tu Lado"
 
-Este documento detalla la lógica de datos, restricciones y reglas de negocio necesarias para la implementación del modelo de base de datos relacional.
+Este documento detalla la lógica de datos, restricciones y reglas de negocio respaldadas e implementadas por el modelo de base de datos relacional PostgreSQL.
 
-## 1. Definición del Universo de Productos
+## 1. Definición del Universo de Productos y Stock
 
-El sistema debe gestionar la coexistencia de dos modelos de inventario distintos dentro de la misma arquitectura:
+El sistema categoriza los productos y maneja el inventario enfocándose estrictamente en la producción propia, diferenciándolos a través de la bandera booleana `es_propio` en la tabla principal de productos.
 
-### 1.1 Inventario por Unidades (Comerciales)
+### 1.1 Productos Comerciales (`es_propio = FALSE`)
 *   **Origen:** Proveedores externos (Delizia, Pil, etc.).
-*   **Unidad de Medida:** Números enteros (Integer).
-*   **Comportamiento:** Descuento lineal (1 venta = -1 unidad).
+*   **Gestión de Inventario:** En la actual iteración de la BD, **no se maneja un kardex de stock físico por unidades** para estos ítems. Se controla únicamente su flujo de salida en ventas a través del campo `cantidad` en el detalle de la venta.
 
-### 1.2 Inventario por Peso (Artesanales)
-*   **Origen:** Producción propia.
-*   **Unidad de Medida:** Gramos (Decimal/Float).
-*   **Complejidad:** Cada sabor tiene un costo base diferenciado.
-*   **Lógica de Descuento:** Al vender un producto de tipo "Vaso" o "Copa", el sistema debe iterar sobre los sabores seleccionados y descontar una cantidad estándar de gramos (definida por parámetro, ej. 75g o 150g) de la existencia actual del sabor.
+### 1.2 Producción Propia y Sabores (`es_propio = TRUE`)
+*   **Origen:** Producción artesanal interna.
+*   **Unidad de Medida:** Gramos (Numeric/Decimal).
+*   **Complejidad:** Cada sabor se registra de forma independiente con un `costo_produccion_gramo` específico y un `stock_gramos` que monitorea las existencias.
+*   **Lógica de Descuento:** Al vender un producto artesanal (ej. "Copa 2 Sabores"), el sistema registra la venta del producto principal y, simultáneamente, genera registros en la tabla de resolución `detalle_sabores`, especificando exactamente el ID del sabor y la cantidad de `gramos_descontados` para afectar el stock real.
 
 ## 2. Gestión de Precios y Canales de Venta
 
-La base de datos debe soportar una estructura de precios dinámica según el canal de origen para auditar la rentabilidad real.
+La base de datos soporta una estructura de precios dinámica y desglosada para auditar la rentabilidad, apoyándose en tipos de datos ENUM personalizados (`canal_venta_enum` y `metodo_pago_enum`).
 
-### 2.1 Desglose de Venta por Delivery
-Para transacciones vía plataformas externas (Yango, PedidosYa), la entidad de ventas debe registrar:
-*   **Monto Base:** Precio de lista del helado.
-*   **Comisión App:** Valor retenido por la plataforma (ej. 15-20%).
-*   **Tarifa de Envío:** Costo del motorizado (externo a la heladería).
-*   **Total Usuario:** Sumatoria de los tres conceptos anteriores.
+### 2.1 Desglose de Venta Transaccional
+Toda transacción comercial genera una cabecera de venta que registra la realidad financiera de la operación. Especialmente útil para plataformas (Yango, PedidosYa), la entidad obliga a desglosar:
+*   **Monto Base:** Sumatoria del subtotal de los productos.
+*   **Comisión App:** Valor retenido por la plataforma externa (permite nulos/cero en ventas de Local).
+*   **Costo de Envío:** Tarifa adicional de logística.
+*   **Total Final:** Sumatoria y cálculo real que cuadra con el pago del usuario.
 
 ## 3. Arquitectura del Personal y Control de Jornada
 
-El sistema de turnos es rígido en tiempos pero flexible en asignación de personal.
+El modelo soporta la asignación dinámica de turnos manteniendo un registro histórico estricto de quién operó la caja.
 
-### 3.1 Estructura de Turnos
-*   **T1 (Mañana):** 08:00 - 12:00
-*   **T2 (Tarde):** 14:30 - 18:30
-*   **T3 (Noche):** 18:30 - 22:30
+### 3.1 Estructura de Turnos (`turnos_definicion`)
+*   Los turnos son parametrizables (ej. T1, T2, T3) y están resguardados por una restricción de integridad temporal: la `hora_fin` siempre debe ser mayor a la `hora_inicio`.
 
-### 3.2 Reglas de Asignación
-*   **Dependiente de Medio Tiempo:** Posee una relación 1:1 con la tabla de turnos por día.
-*   **Dependiente de Tiempo Completo:** Posee una relación 1:2 con la tabla de turnos por día.
-*   **Auditoría de Ventas:** Cada venta debe estar vinculada al ID del empleado y al ID del turno activo para detectar descuadres de caja.
+### 3.2 Reglas de Asignación y Auditoría
+*   **Asignación Dinámica:** Los empleados (`tipo_contrato_enum`: Medio Tiempo o Tiempo Completo) se vinculan a sus jornadas mediante la tabla `asignacion_turnos`, especificando la `fecha` exacta y el `id_turno`.
+*   **Auditoría de Ventas:** La base de datos impone que **toda venta** (`ventas_cabecera`) esté conectada obligatoriamente por llave foránea a un `id_empleado` y a un `id_turno`, imposibilitando transacciones huérfanas o "ventas fantasma" fuera de turno.
 
 ## 4. Sistema de Fidelización y Canjes
 
-Para evitar la contaminación de los reportes financieros, la lógica de fidelización se separa del flujo de caja ordinario.
+La lógica de fidelización transita por un flujo paralelo al monetario para garantizar la limpieza de los reportes financieros.
 
-### 4.1 Acumulación de Puntos
-*   **Ratio:** 1 Bs gastado = 1 Punto acumulado (configurable).
-*   **Restricción:** Solo se acumulan puntos en ventas cerradas y pagadas.
+### 4.1 Acumulación de Puntos por Producto
+*   **Lógica Ajustada:** La base de datos **no** otorga puntos por dinero gastado (1 Bs = 1 Punto). En su lugar, utiliza un sistema focalizado donde **cada producto tiene un valor de `puntos_otorgados`**. Esto permite estrategias comerciales agresivas (ej. un producto en promoción puede otorgar más puntos independientemente de su precio).
+*   **Balance del Cliente:** Se centraliza y acumula en el perfil del cliente (`puntos_acumulados`).
 
 ### 4.2 Lógica de Canjes (Premios)
-*   Los premios deben existir en una tabla de catálogo con un "Costo en Puntos".
-*   Al procesar un canje, se genera un registro en una tabla de `Canjes`, restando los puntos al cliente y los gramos/unidades al inventario, pero con un valor monetario de 0 en el libro de ventas principal.
+*   Los premios existen en un catálogo (`premios`) y están vinculados físicamente a un producto base mediante `id_producto_vinculado`, definiendo un costo estricto en `puntos_requeridos`.
+*   Al canjear, se graba en `canjes_registro` auditando la `fecha_hora`, el cliente, el premio y los `puntos_utilizados`, sin tocar el libro diario de `ventas_cabecera`.
 
 ## 5. Integridad y Restricciones de Datos (Constraints)
 
-*   **Stock Mínimo:** El sistema debe disparar una alerta cuando un sabor artesanal baje de los 500g o un producto comercial baje de 5 unidades.
-*   **Unicidad:** Los clientes se identifican de forma única mediante su número de documento (CI/NIT).
-*   **Consistencia de Turnos:** Un empleado no puede ser asignado a dos turnos que se solapen en horario.
+Las reglas de negocio delegadas al motor PostgreSQL para evitar datos corruptos son:
 
-## 6. Diccionario de Datos Preliminar
+*   **Evitar Saldos y Precios Negativos:** Existen restricciones `CHECK` que impiden que el `precio_base`, `stock_gramos`, `gramos_descontados` y el `precio_unitario` sean menores a cero.
+*   **Unicidad de Identidad:** El `documento_identidad` en la tabla de clientes es un campo `UNIQUE`. No pueden existir dos perfiles con el mismo CI/NIT. Lo mismo ocurre con el nombre de las categorías y los sabores.
+*   **Consistencia de Turnos:** Un empleado no puede duplicar su presencia en el mismo turno el mismo día. Garantizado por el constraint `UNIQUE(id_empleado, fecha, id_turno)` en las asignaciones.
+*   **Borrado en Cascada (Integridad Referencial):** Si se anula o elimina una venta (`ventas_cabecera`), la BD eliminará automáticamente su detalle (`ventas_detalle`) y el desglose de sus sabores (`detalle_sabores`) mediante `ON DELETE CASCADE`.
 
-Entidades identificadas para el modelo relacional:
-*   **PRODUCTOS:** Almacena info base de helados y toppings.
-*   **SABORES:** Especificación de helados artesanales (propios).
-*   **INVENTARIO:** Stock actual en gramos/unidades.
-*   **CLIENTES:** Perfil y balance de puntos.
-*   **VENTAS:** Cabecera de la transacción y desglose de delivery.
-*   **DETALLE_VENTA:** Relación de productos y sabores elegidos.
-*   **EMPLEADOS:** Datos personales y tipo de contrato.
-*   **TURNOS_ASIGNADOS:** Calendario operativo de la heladería.
-*   **PREMIOS:** Catálogo de productos canjeables por puntos.
+## 6. Diccionario de Datos Físico
+
+Entidades y tablas maestras implementadas:
+*   **`categorias`**: Clasificación maestra del menú.
+*   **`productos`**: Catálogo comercial, precios y configuración de puntos otorgados.
+*   **`sabores`**: Inventario de producción propia y costos base en gramos.
+*   **`empleados`**: Datos de personal contratado e historial de ingreso.
+*   **`turnos_definicion`**: Catálogo de horarios operativos.
+*   **`asignacion_turnos`**: Planilla dinámica de trabajo diario.
+*   **`clientes`**: Identidad de compradores y su billetera virtual de puntos.
+*   **`premios`**: Catálogo de recompensas e integraciones con productos.
+*   **`ventas_cabecera`**: Registro financiero central, canales y totales.
+*   **`ventas_detalle`**: Líneas de factura y unidades vendidas.
+*   **`detalle_sabores`**: Tabla de control para el descuento exacto de gramos por venta.
+*   **`canjes_registro`**: Auditoría de premios entregados a clientes.
