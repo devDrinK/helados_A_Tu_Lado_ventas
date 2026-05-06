@@ -1,15 +1,20 @@
 -- ========================================================
+-- ARCHIVO 1: ARQUITECTURA Y ESTRUCTURA (DDL)
 -- PROYECTO: Heladería "A tu Lado"
--- DESCRIPCIÓN: Sistema de Gestión Híbrida y Fidelización
--- MOTOR: PostgreSQL
 -- ========================================================
 
--- 1. TIPOS PERSONALIZADOS (ENUMS)
+-- Limpieza preventiva
+DROP TABLE IF EXISTS canjes_registro, detalle_sabores, ventas_detalle, ventas_cabecera CASCADE;
+DROP TABLE IF EXISTS premios, clientes, asignacion_turnos, turnos_definicion, empleados CASCADE;
+DROP TABLE IF EXISTS sabores, productos, categorias CASCADE;
+DROP TYPE IF EXISTS tipo_contrato_enum, metodo_pago_enum, canal_venta_enum CASCADE;
+
+-- Tipos personalizados
 CREATE TYPE tipo_contrato_enum AS ENUM ('Medio Tiempo', 'Tiempo Completo');
 CREATE TYPE metodo_pago_enum AS ENUM ('Efectivo', 'Tarjeta');
 CREATE TYPE canal_venta_enum AS ENUM ('Local', 'Yango', 'PedidosYa');
 
--- 2. TABLAS DE CONFIGURACIÓN Y MAESTROS
+-- Tablas maestras
 CREATE TABLE categorias (
     id_categoria SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL UNIQUE
@@ -20,7 +25,7 @@ CREATE TABLE productos (
     id_categoria INT NOT NULL REFERENCES categorias(id_categoria),
     nombre VARCHAR(100) NOT NULL,
     descripcion TEXT,
-    precio_base NUMERIC(10, 2) NOT NULL CHECK (precio_base >= 0),
+    precio_base NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (precio_base >= 0),
     es_propio BOOLEAN NOT NULL DEFAULT FALSE,
     puntos_otorgados INT NOT NULL DEFAULT 0 CHECK (puntos_otorgados >= 0)
 );
@@ -32,7 +37,7 @@ CREATE TABLE sabores (
     costo_produccion_gramo NUMERIC(10, 4) NOT NULL DEFAULT 0
 );
 
--- 3. PERSONAL Y TURNOS
+-- Personal y Turnos
 CREATE TABLE empleados (
     id_empleado SERIAL PRIMARY KEY,
     nombre_completo VARCHAR(150) NOT NULL,
@@ -56,7 +61,7 @@ CREATE TABLE asignacion_turnos (
     UNIQUE(id_empleado, fecha, id_turno)
 );
 
--- 4. CLIENTES Y FIDELIDAD
+-- Clientes y Fidelización
 CREATE TABLE clientes (
     id_cliente SERIAL PRIMARY KEY,
     documento_identidad VARCHAR(20) NOT NULL UNIQUE,
@@ -71,7 +76,7 @@ CREATE TABLE premios (
     id_producto_vinculado INT NOT NULL REFERENCES productos(id_producto)
 );
 
--- 5. VENTAS (CON PRECIOS HISTÓRICOS Y DESGLOSE)
+-- Ventas e Integridad
 CREATE TABLE ventas_cabecera (
     id_venta SERIAL PRIMARY KEY,
     id_cliente INT REFERENCES clientes(id_cliente),
@@ -83,7 +88,7 @@ CREATE TABLE ventas_cabecera (
     monto_base NUMERIC(10, 2) NOT NULL DEFAULT 0,
     comision_app NUMERIC(10, 2) DEFAULT 0,
     costo_envio NUMERIC(10, 2) DEFAULT 0,
-    total_final NUMERIC(10, 2) NOT NULL
+    total_final NUMERIC(10, 2) NOT NULL DEFAULT 0
 );
 
 CREATE TABLE ventas_detalle (
@@ -91,8 +96,8 @@ CREATE TABLE ventas_detalle (
     id_venta INT NOT NULL REFERENCES ventas_cabecera(id_venta) ON DELETE CASCADE,
     id_producto INT NOT NULL REFERENCES productos(id_producto),
     cantidad INT NOT NULL DEFAULT 1 CHECK (cantidad > 0),
-    precio_unitario NUMERIC(10,2) NOT NULL CHECK (precio_unitario >= 0),
-    subtotal NUMERIC(10, 2) NOT NULL
+    precio_unitario NUMERIC(10,2) NOT NULL DEFAULT 0,
+    subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0
 );
 
 CREATE TABLE detalle_sabores (
@@ -109,3 +114,7 @@ CREATE TABLE canjes_registro (
     fecha_hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     puntos_utilizados INT NOT NULL
 );
+
+-- Índices de optimización
+CREATE INDEX idx_ventas_fecha ON ventas_cabecera(fecha_hora);
+CREATE INDEX idx_cliente_dni ON clientes(documento_identidad);
