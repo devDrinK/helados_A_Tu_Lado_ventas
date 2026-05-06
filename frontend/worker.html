@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Ventas - Heladería A Tu Lado</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .pos-container { display: grid; grid-template-columns: 1fr 400px; gap: 2rem; height: calc(100vh - 150px); }
+        .product-selection { overflow-y: auto; background: white; border-radius: 20px; padding: 1.5rem; box-shadow: var(--shadow); }
+        .cart-panel { background: var(--light-green); border-radius: 20px; padding: 1.5rem; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+        .pos-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .flavor-tag { background: white; padding: 2px 8px; border-radius: 5px; font-size: 0.7rem; margin-right: 4px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer">
+            <i class="fas fa-leaf"></i> A Tu Lado <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 10px;">| Punto de Venta</span>
+        </div>
+        <div>
+            <span id="activeUser" style="margin-right: 15px;"><i class="fas fa-user-circle"></i> Vendedor</span>
+            <a href="index.html" class="btn btn-primary" style="background: rgba(255,255,255,0.2)">Salir</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="pos-container">
+            <div class="product-selection">
+                <div style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
+                    <input type="text" id="searchProduct" placeholder="Buscar producto..." style="flex: 1; padding: 0.8rem; border-radius: 10px; border: 1px solid #ddd;">
+                    <select id="filterCat" style="padding: 0.8rem; border-radius: 10px; border: 1px solid #ddd;">
+                        <option value="all">Todas las categorías</option>
+                    </select>
+                </div>
+                <div id="posCatalog" class="catalog-grid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));">
+                    <!-- Products -->
+                </div>
+            </div>
+
+            <div class="cart-panel">
+                <h3 style="margin-bottom: 1rem; color: var(--primary-green);"><i class="fas fa-shopping-basket"></i> Pedido Actual</h3>
+                
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="clientCI" placeholder="CI Cliente (opcional)" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: none; margin-bottom: 0.5rem;">
+                </div>
+
+                <div id="cartItems" style="flex: 1; overflow-y: auto;">
+                    <p style="text-align: center; color: #666; margin-top: 2rem;">El carrito está vacío</p>
+                </div>
+
+                <div style="background: white; padding: 1.5rem; border-radius: 15px; margin-top: 1rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span>Monto Base:</span> <span id="montoBase">Bs. 0.00</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-weight: 800; font-size: 1.4rem; color: var(--primary-green);">
+                        <span>Total:</span> <span id="totalFinal">Bs. 0.00</span>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem;">
+                        <select id="metodoPago" style="padding: 0.5rem; border-radius: 5px;">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                        </select>
+                        <select id="canalVenta" style="padding: 0.5rem; border-radius: 5px;">
+                            <option value="Local">Local</option>
+                            <option value="Yango">Yango</option>
+                            <option value="PedidosYa">PedidosYa</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" style="width: 100%; padding: 1.2rem;" onclick="processSale()">COBRAR Y FINALIZAR</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script>
+        let products = [];
+        let cart = [];
+        let flavors = [];
+
+        async function initPOS() {
+            try {
+                products = await api.get('/products');
+                flavors = await api.get('/products/flavors');
+                const cats = await api.get('/products/categories');
+                
+                const catSelect = document.getElementById('filterCat');
+                cats.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id_categoria;
+                    opt.textContent = c.nombre;
+                    catSelect.appendChild(opt);
+                });
+
+                renderPOSCatalog(products);
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        function renderPOSCatalog(items) {
+            const container = document.getElementById('posCatalog');
+            container.innerHTML = items.map(p => `
+                <div class="product-card" style="padding: 1rem; text-align: center; cursor: pointer;" onclick="addToCart(${p.id_producto})">
+                    <span style="font-size: 2rem;">🍦</span>
+                    <h4 style="font-size: 0.9rem; margin: 0.5rem 0;">${p.nombre}</h4>
+                    <span style="font-weight: 800; color: var(--primary-green);">Bs. ${p.precio_base}</span>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(id) {
+            const product = products.find(p => p.id_producto === id);
+            cart.push({ ...product, selectedFlavors: [] });
+            updateCartUI();
+        }
+
+        function updateCartUI() {
+            const container = document.getElementById('cartItems');
+            if (cart.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; margin-top: 2rem;">El carrito está vacío</p>';
+                document.getElementById('montoBase').textContent = 'Bs. 0.00';
+                document.getElementById('totalFinal').textContent = 'Bs. 0.00';
+                return;
+            }
+
+            container.innerHTML = cart.map((item, index) => `
+                <div class="pos-item">
+                    <div>
+                        <strong style="font-size: 0.9rem;">${item.nombre}</strong><br>
+                        <span style="font-size: 0.8rem; color: #666;">Bs. ${item.precio_base}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-trash" style="color: #e53935; cursor: pointer;" onclick="removeFromCart(${index})"></i>
+                    </div>
+                </div>
+            `).join('');
+
+            const total = cart.reduce((sum, item) => sum + parseFloat(item.precio_base), 0);
+            document.getElementById('montoBase').textContent = `Bs. ${total.toFixed(2)}`;
+            document.getElementById('totalFinal').textContent = `Bs. ${total.toFixed(2)}`;
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        async function processSale() {
+            if (cart.length === 0) return alert('El carrito está vacío');
+            
+            const ci = document.getElementById('clientCI').value;
+            let id_cliente = null;
+
+            if (ci) {
+                const customers = await api.get('/customers');
+                const customer = customers.find(c => c.documento_identidad === ci);
+                if (customer) id_cliente = customer.id_cliente;
+            }
+
+            const saleData = {
+                id_cliente,
+                id_empleado: 1, // Hardcoded for demo
+                id_turno: 1,    // Hardcoded for demo
+                metodo_pago: document.getElementById('metodoPago').value,
+                canal_venta: document.getElementById('canalVenta').value,
+                items: cart.map(item => ({
+                    id_producto: item.id_producto,
+                    cantidad: 1,
+                    precio_unitario: item.precio_base,
+                    sabores: [] // Simplificado para demo
+                }))
+            };
+
+            try {
+                await api.post('/sales', saleData);
+                alert('¡Venta realizada con éxito!');
+                cart = [];
+                updateCartUI();
+                document.getElementById('clientCI').value = '';
+            } catch (error) {
+                alert('Error al procesar venta: ' + error.message);
+            }
+        }
+
+        initPOS();
+    </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración - Heladería A Tu Lado</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer">
+            <i class="fas fa-leaf"></i> A Tu Lado <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 10px;">| Dashboard Admin</span>
+        </div>
+        <a href="index.html" class="btn btn-primary" style="background: rgba(255,255,255,0.2)">Cerrar Sesión</a>
+    </header>
+
+    <main class="container">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
+                <i class="fas fa-dollar-sign" style="font-size: 2rem; color: var(--secondary-green)"></i>
+                <div style="text-align: left;">
+                    <p style="font-size: 0.8rem; color: #666;">Ventas Hoy</p>
+                    <h2 id="todaySales">Bs. 0</h2>
+                </div>
+            </div>
+            <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
+                <i class="fas fa-shopping-bag" style="font-size: 2rem; color: #2196f3"></i>
+                <div style="text-align: left;">
+                    <p style="font-size: 0.8rem; color: #666;">Pedidos</p>
+                    <h2 id="totalOrders">0</h2>
+                </div>
+            </div>
+            <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
+                <i class="fas fa-users" style="font-size: 2rem; color: #9c27b0"></i>
+                <div style="text-align: left;">
+                    <p style="font-size: 0.8rem; color: #666;">Clientes</p>
+                    <h2 id="totalClients">0</h2>
+                </div>
+            </div>
+            <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
+                <i class="fas fa-chart-line" style="font-size: 2rem; color: #ff9800"></i>
+                <div style="text-align: left;">
+                    <p style="font-size: 0.8rem; color: #666;">Crecimiento</p>
+                    <h2>+12%</h2>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+            <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
+                <h3 style="margin-bottom: 1.5rem;">Historial de Ventas Recientes</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 2px solid var(--light-green);">
+                            <th style="padding: 1rem 0;">Fecha</th>
+                            <th>Cliente</th>
+                            <th>Canal</th>
+                            <th>Total</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesTableBody">
+                        <!-- Sales rows -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
+                <h3 style="margin-bottom: 1.5rem;">Stock de Sabores</h3>
+                <div id="stockList" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Stock items -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script>
+        async function loadDashboard() {
+            try {
+                const sales = await api.get('/sales');
+                const customers = await api.get('/customers');
+                const flavors = await api.get('/products/flavors');
+
+                // Update Stats
+                document.getElementById('totalOrders').textContent = sales.length;
+                document.getElementById('totalClients').textContent = customers.length;
+                const totalIncome = sales.reduce((sum, s) => sum + parseFloat(s.total_final), 0);
+                document.getElementById('todaySales').textContent = `Bs. ${totalIncome.toFixed(2)}`;
+
+                // Render Sales Table
+                const tableBody = document.getElementById('salesTableBody');
+                tableBody.innerHTML = sales.slice(0, 10).map(s => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 1rem 0; font-size: 0.9rem;">${new Date(s.fecha_hora).toLocaleDateString()}</td>
+                        <td style="font-size: 0.9rem;">${s.cliente_nombre || 'General'}</td>
+                        <td><span class="badge" style="background: #eee; color: #333">${s.canal_venta}</span></td>
+                        <td style="font-weight: 700;">Bs. ${s.total_final}</td>
+                        <td><i class="fas fa-eye" style="color: var(--primary-green); cursor: pointer;"></i></td>
+                    </tr>
+                `).join('');
+
+                // Render Stock
+                const stockList = document.getElementById('stockList');
+                stockList.innerHTML = flavors.map(f => {
+                    const percentage = Math.min((f.stock_gramos / 10000) * 100, 100); // Assuming 10kg max
+                    const color = percentage < 20 ? '#e53935' : (percentage < 50 ? '#ffb300' : '#43a047');
+                    return `
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                                <span>${f.nombre}</span>
+                                <span>${(f.stock_gramos / 1000).toFixed(1)} kg</span>
+                            </div>
+                            <div style="height: 8px; background: #eee; border-radius: 4px; overflow: hidden;">
+                                <div style="width: ${percentage}%; height: 100%; background: ${color}; transition: width 0.5s;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

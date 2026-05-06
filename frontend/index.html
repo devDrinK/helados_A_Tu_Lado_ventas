@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heladería A Tu Lado - Sabores de la Naturaleza</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <i class="fas fa-leaf"></i>
+            A Tu Lado
+        </div>
+        <div class="nav-info">
+            <span>Bolivia</span>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="hero text-center">
+            <h1>Bienvenido a la Experiencia Silvestre</h1>
+            <p>Selecciona tu perfil para continuar</p>
+        </section>
+
+        <div class="role-selection">
+            <div class="role-card" onclick="window.location.href='customer.html'">
+                <i class="fas fa-ice-cream"></i>
+                <h2>Cliente</h2>
+                <p>Explora nuestro catálogo, revisa tus puntos y pide por delivery.</p>
+                <span class="btn btn-primary">Entrar como Cliente</span>
+            </div>
+
+            <div class="role-card" onclick="window.location.href='worker.html'">
+                <i class="fas fa-cash-register"></i>
+                <h2>Trabajador</h2>
+                <p>Gestiona ventas, atiende pedidos y controla el stock de sabores.</p>
+                <span class="btn btn-primary">Panel de Ventas</span>
+            </div>
+
+            <div class="role-card" onclick="window.location.href='admin.html'">
+                <i class="fas fa-user-shield"></i>
+                <h2>Administrador</h2>
+                <p>Reportes, gestión de personal, productos y analíticas.</p>
+                <span class="btn btn-primary">Administración</span>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center mt-2" style="padding: 2rem; color: var(--earth-brown); opacity: 0.7;">
+        &copy; 2026 Heladería A Tu Lado - Conectando con la naturaleza.
+    </footer>
+</body>
+</html>

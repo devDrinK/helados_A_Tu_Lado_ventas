@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo - Heladería A Tu Lado</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer">
+            <i class="fas fa-leaf"></i> A Tu Lado
+        </div>
+        <div class="nav-links">
+            <button class="btn btn-primary" onclick="showPointsModal()"><i class="fas fa-star"></i> Mis Puntos</button>
+            <a href="index.html" class="btn btn-primary" style="background: transparent; border: 1px solid white">Volver</a>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="delivery-banner" style="background: var(--light-green); padding: 2rem; border-radius: 20px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 style="color: var(--primary-green)">¿Hambre de Helado?</h2>
+                <p>Pide por nuestros partners de confianza</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <a href="https://www.pedidosya.com.bo" target="_blank" class="btn" style="background: #e21247; color: white;">PedidosYa</a>
+                <a href="#" class="btn" style="background: #ffd300; color: #000;">Yango Delivery</a>
+            </div>
+        </section>
+
+        <section class="filters" style="margin-bottom: 2rem; display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;">
+            <button class="btn btn-primary" onclick="filterProducts('all')">Todos</button>
+            <button class="btn btn-primary" style="background: var(--secondary-green)" onclick="filterProducts('propio')">Artesanales</button>
+            <button class="btn btn-primary" style="background: #e91e63" onclick="filterProducts('terceros')">De Terceros (Delizia/PIL)</button>
+        </section>
+
+        <div id="catalog" class="catalog-grid">
+            <!-- Products will be loaded here -->
+            <div class="text-center" style="grid-column: 1/-1; padding: 3rem;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary-green)"></i>
+                <p>Cargando sabores silvestres...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Points Modal -->
+    <div id="pointsModal" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 2.5rem; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; position: relative;">
+            <i class="fas fa-times" onclick="hidePointsModal()" style="position: absolute; right: 20px; top: 20px; cursor: pointer;"></i>
+            <i class="fas fa-medal" style="font-size: 4rem; color: #ffd700; margin-bottom: 1rem;"></i>
+            <h3>Consulta tus Puntos</h3>
+            <p>Ingresa tu CI para ver cuánto has acumulado</p>
+            <input type="text" id="ciInput" placeholder="CI del Cliente" style="width: 100%; padding: 1rem; margin: 1rem 0; border: 1px solid #ddd; border-radius: 10px;">
+            <button class="btn btn-primary" style="width: 100%;" onclick="checkPoints()">Consultar</button>
+            <div id="pointsResult" class="mt-2"></div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        let allProducts = [];
+
+        async function loadCatalog() {
+            try {
+                allProducts = await api.get('/products');
+                renderProducts(allProducts);
+            } catch (error) {
+                document.getElementById('catalog').innerHTML = '<p>Error cargando productos.</p>';
+            }
+        }
+
+        function renderProducts(products) {
+            const container = document.getElementById('catalog');
+            container.innerHTML = products.map(p => `
+                <div class="product-card">
+                    <div class="product-img" style="background-image: url('https://source.unsplash.com/400x300/?icecream,${p.nombre}')">
+                        ${!p.nombre ? '🍦' : ''}
+                    </div>
+                    <div class="product-info">
+                        <span class="badge ${p.es_propio ? 'badge-artisanal' : 'badge-thirdparty'}">
+                            ${p.es_propio ? 'Artesanal' : 'Tercero'}
+                        </span>
+                        <h3 style="margin: 0.5rem 0">${p.nombre}</h3>
+                        <p style="font-size: 0.9rem; color: #666; height: 40px; overflow: hidden;">${p.descripcion || 'Sabor único y natural.'}</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                            <span style="font-weight: 800; color: var(--primary-green); font-size: 1.2rem;">Bs. ${p.precio_base}</span>
+                            <span style="font-size: 0.8rem; color: var(--earth-brown);"><i class="fas fa-plus-circle"></i> ${p.puntos_otorgados} pts</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterProducts(type) {
+            if (type === 'all') renderProducts(allProducts);
+            else if (type === 'propio') renderProducts(allProducts.filter(p => p.es_propio));
+            else if (type === 'terceros') renderProducts(allProducts.filter(p => !p.es_propio));
+        }
+
+        function showPointsModal() { document.getElementById('pointsModal').style.display = 'flex'; }
+        function hidePointsModal() { document.getElementById('pointsModal').style.display = 'none'; }
+
+        async function checkPoints() {
+            const ci = document.getElementById('ciInput').value;
+            if (!ci) return;
+            const resultDiv = document.getElementById('pointsResult');
+            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                // Simplificado: Buscamos en la lista de clientes si existe un endpoint de búsqueda por CI
+                const customers = await api.get('/customers');
+                const customer = customers.find(c => c.documento_identidad === ci);
+                if (customer) {
+                    resultDiv.innerHTML = `
+                        <h2 style="color: var(--secondary-green)">${customer.puntos_acumulados}</h2>
+                        <p>Puntos acumulados</p>
+                        <p style="font-size: 0.8rem; margin-top: 0.5rem">¡Sigue disfrutando para ganar premios!</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<p>Cliente no encontrado. ¡Regístrate en tienda!</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<p>Error al consultar.</p>';
+            }
+        }
+
+        loadCatalog();
+    </script>
+</body>
+</html>
