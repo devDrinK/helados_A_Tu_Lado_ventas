@@ -7,123 +7,293 @@
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header>
         <div class="logo" onclick="window.location.href='index.html'" style="cursor:pointer">
-            <i class="fas fa-leaf"></i> A Tu Lado <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 10px;">| Dashboard Admin</span>
+            <i class="fas fa-leaf"></i> A Tu Lado <span style="font-size: 0.8rem; opacity: 0.7; margin-left: 10px;">| Panel Administrativo</span>
         </div>
-        <a href="index.html" class="btn btn-primary" style="background: rgba(255,255,255,0.2)">Cerrar Sesión</a>
+        <div class="nav-links">
+            <button class="btn btn-primary" onclick="loadDashboard()"><i class="fas fa-sync"></i> Refrescar</button>
+            <a href="index.html" class="btn btn-primary" style="background: rgba(255,255,255,0.2)">Salir</a>
+        </div>
     </header>
 
     <main class="container">
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
-            <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
-                <i class="fas fa-dollar-sign" style="font-size: 2rem; color: var(--secondary-green)"></i>
-                <div style="text-align: left;">
-                    <p style="font-size: 0.8rem; color: #666;">Ventas Hoy</p>
-                    <h2 id="todaySales">Bs. 0</h2>
+        <!-- Dashboard Tabs -->
+        <div style="display: flex; gap: 1rem; margin-bottom: 2rem; background: white; padding: 1rem; border-radius: 15px; box-shadow: var(--shadow); overflow-x: auto;">
+            <button id="btn-tab-stats" class="btn btn-primary tab-btn" onclick="showTab('stats')">Estadísticas</button>
+            <button id="btn-tab-sales" class="btn tab-btn" style="background: var(--light-green); color: var(--primary-green);" onclick="showTab('sales')">Historial de Ventas</button>
+            <button id="btn-tab-customers" class="btn tab-btn" style="background: var(--light-green); color: var(--primary-green);" onclick="showTab('customers')">Clientes</button>
+            <button id="btn-tab-inventory" class="btn tab-btn" style="background: var(--light-green); color: var(--primary-green);" onclick="showTab('inventory')">Inventario y Stock</button>
+        </div>
+
+        <!-- Section: Stats -->
+        <div id="section-stats" class="admin-section">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
+                    <i class="fas fa-hand-holding-usd" style="font-size: 2rem; color: var(--secondary-green)"></i>
+                    <div style="text-align: left;">
+                        <p style="font-size: 0.8rem; color: #666;">Ingresos Totales</p>
+                        <h2 id="todaySales">Bs. 0</h2>
+                    </div>
+                </div>
+                <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
+                    <i class="fas fa-receipt" style="font-size: 2rem; color: #2196f3"></i>
+                    <div style="text-align: left;">
+                        <p style="font-size: 0.8rem; color: #666;">Pedidos Hoy</p>
+                        <h2 id="totalOrders">0</h2>
+                    </div>
+                </div>
+                <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
+                    <i class="fas fa-clock" style="font-size: 2rem; color: #ff9800"></i>
+                    <div style="text-align: left;">
+                        <p style="font-size: 0.8rem; color: #666;">Pendientes</p>
+                        <h2 id="pendingCount">0</h2>
+                    </div>
+                </div>
+                <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
+                    <i class="fas fa-users" style="font-size: 2rem; color: #9c27b0"></i>
+                    <div style="text-align: left;">
+                        <p style="font-size: 0.8rem; color: #666;">Total Clientes</p>
+                        <h2 id="totalClients">0</h2>
+                    </div>
                 </div>
             </div>
-            <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
-                <i class="fas fa-shopping-bag" style="font-size: 2rem; color: #2196f3"></i>
-                <div style="text-align: left;">
-                    <p style="font-size: 0.8rem; color: #666;">Pedidos</p>
-                    <h2 id="totalOrders">0</h2>
-                </div>
-            </div>
-            <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
-                <i class="fas fa-users" style="font-size: 2rem; color: #9c27b0"></i>
-                <div style="text-align: left;">
-                    <p style="font-size: 0.8rem; color: #666;">Clientes</p>
-                    <h2 id="totalClients">0</h2>
-                </div>
-            </div>
-            <div class="role-card" style="padding: 1.5rem; flex-direction: row; justify-content: flex-start; gap: 1rem;">
-                <i class="fas fa-chart-line" style="font-size: 2rem; color: #ff9800"></i>
-                <div style="text-align: left;">
-                    <p style="font-size: 0.8rem; color: #666;">Crecimiento</p>
-                    <h2>+12%</h2>
+            
+            <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
+                <h3>Resumen de Stock Crítico</h3>
+                <div id="criticalStock" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+                    <!-- Stock items -->
                 </div>
             </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <!-- Section: Sales History -->
+        <div id="section-sales" class="admin-section hidden">
             <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
-                <h3 style="margin-bottom: 1.5rem;">Historial de Ventas Recientes</h3>
-                <table style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="text-align: left; border-bottom: 2px solid var(--light-green);">
-                            <th style="padding: 1rem 0;">Fecha</th>
-                            <th>Cliente</th>
-                            <th>Canal</th>
-                            <th>Total</th>
-                            <th>Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody id="salesTableBody">
-                        <!-- Sales rows -->
-                    </tbody>
-                </table>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h3>Historial Completo de Ventas</h3>
+                    <input type="text" id="searchSale" placeholder="Buscar por cliente..." onkeyup="filterSales()" style="padding: 0.5rem; border-radius: 5px; border: 1px solid #ddd;">
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 2px solid var(--light-green);">
+                                <th style="padding: 1rem 0;">ID</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Canal</th>
+                                <th>Estado</th>
+                                <th>Total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesTableBody"></tbody>
+                    </table>
+                </div>
             </div>
+        </div>
 
+        <!-- Section: Customers -->
+        <div id="section-customers" class="admin-section hidden">
             <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
-                <h3 style="margin-bottom: 1.5rem;">Stock de Sabores</h3>
-                <div id="stockList" style="display: flex; flex-direction: column; gap: 1rem;">
-                    <!-- Stock items -->
+                <h3>Directorio de Clientes</h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 2px solid var(--light-green);">
+                                <th style="padding: 1rem 0;">Documento</th>
+                                <th>Nombre</th>
+                                <th>Puntos Acumulados</th>
+                                <th>Nivel</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Inventory -->
+        <div id="section-inventory" class="admin-section hidden">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
+                    <h3>Lista de Productos</h3>
+                    <div id="productsList" style="margin-top: 1rem;"></div>
+                </div>
+                <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
+                    <h3>Estado de Sabores</h3>
+                    <div id="flavorsList" style="margin-top: 1rem;"></div>
                 </div>
             </div>
         </div>
     </main>
 
+    <!-- Sale Detail Modal -->
+    <div id="saleModal" class="hidden" style="position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 2.5rem; border-radius: 20px; width: 90%; max-width: 500px; position: relative; max-height: 90vh; overflow-y: auto;">
+            <i class="fas fa-times" onclick="closeSaleModal()" style="position: absolute; right: 20px; top: 20px; cursor: pointer;"></i>
+            <h3>Detalle de la Venta</h3>
+            <hr style="margin: 1rem 0; opacity: 0.1;">
+            <div id="saleModalContent"></div>
+        </div>
+    </div>
+
     <script src="js/api.js"></script>
     <script>
+        let allSales = [];
+        let allCustomers = [];
+        let allProducts = [];
+        let allFlavors = [];
+
+        function showTab(tabId) {
+            document.querySelectorAll('.admin-section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('btn-primary');
+                b.style.background = 'var(--light-green)';
+                b.style.color = 'var(--primary-green)';
+            });
+            
+            const activeBtn = document.getElementById(`btn-tab-${tabId}`);
+            activeBtn.classList.add('btn-primary');
+            activeBtn.style.background = 'var(--primary-green)';
+            activeBtn.style.color = 'white';
+        }
+
         async function loadDashboard() {
             try {
-                const sales = await api.get('/sales');
-                const customers = await api.get('/customers');
-                const flavors = await api.get('/products/flavors');
+                allSales = await api.get('/sales');
+                allCustomers = await api.get('/customers');
+                allProducts = await api.get('/products');
+                allFlavors = await api.get('/products/flavors');
 
-                // Update Stats
-                document.getElementById('totalOrders').textContent = sales.length;
-                document.getElementById('totalClients').textContent = customers.length;
-                const totalIncome = sales.reduce((sum, s) => sum + parseFloat(s.total_final), 0);
-                document.getElementById('todaySales').textContent = `Bs. ${totalIncome.toFixed(2)}`;
-
-                // Render Sales Table
-                const tableBody = document.getElementById('salesTableBody');
-                tableBody.innerHTML = sales.slice(0, 10).map(s => `
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 1rem 0; font-size: 0.9rem;">${new Date(s.fecha_hora).toLocaleDateString()}</td>
-                        <td style="font-size: 0.9rem;">${s.cliente_nombre || 'General'}</td>
-                        <td><span class="badge" style="background: #eee; color: #333">${s.canal_venta}</span></td>
-                        <td style="font-weight: 700;">Bs. ${s.total_final}</td>
-                        <td><i class="fas fa-eye" style="color: var(--primary-green); cursor: pointer;"></i></td>
-                    </tr>
-                `).join('');
-
-                // Render Stock
-                const stockList = document.getElementById('stockList');
-                stockList.innerHTML = flavors.map(f => {
-                    const percentage = Math.min((f.stock_gramos / 10000) * 100, 100); // Assuming 10kg max
-                    const color = percentage < 20 ? '#e53935' : (percentage < 50 ? '#ffb300' : '#43a047');
-                    return `
-                        <div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
-                                <span>${f.nombre}</span>
-                                <span>${(f.stock_gramos / 1000).toFixed(1)} kg</span>
-                            </div>
-                            <div style="height: 8px; background: #eee; border-radius: 4px; overflow: hidden;">
-                                <div style="width: ${percentage}%; height: 100%; background: ${color}; transition: width 0.5s;"></div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
+                renderStats();
+                renderSales(allSales);
+                renderCustomers();
+                renderInventory();
             } catch (error) {
-                console.error(error);
+                console.error('Error al cargar dashboard:', error);
             }
+        }
+
+        function renderStats() {
+            document.getElementById('totalOrders').textContent = allSales.length;
+            document.getElementById('totalClients').textContent = allCustomers.length;
+            document.getElementById('pendingCount').textContent = allSales.filter(s => s.estado === 'Pendiente').length;
+            const totalIncome = allSales.reduce((sum, s) => sum + parseFloat(s.total_final), 0);
+            document.getElementById('todaySales').textContent = `Bs. ${totalIncome.toFixed(2)}`;
+
+            const criticalContainer = document.getElementById('criticalStock');
+            criticalContainer.innerHTML = allFlavors.slice(0, 4).map(f => {
+                const percentage = Math.min((f.stock_gramos / 10000) * 100, 100);
+                const color = percentage < 20 ? '#e53935' : (percentage < 50 ? '#ffb300' : '#43a047');
+                return `
+                    <div style="background: #f9f9f9; padding: 1rem; border-radius: 10px;">
+                        <p style="font-size: 0.8rem; margin-bottom: 5px;">${f.nombre}</p>
+                        <div style="height: 6px; background: #eee; border-radius: 3px; overflow: hidden;">
+                            <div style="width: ${percentage}%; height: 100%; background: ${color};"></div>
+                        </div>
+                        <p style="font-size: 0.7rem; text-align: right; margin-top: 5px;">${(f.stock_gramos/1000).toFixed(1)} kg</p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderSales(salesData) {
+            const tableBody = document.getElementById('salesTableBody');
+            tableBody.innerHTML = salesData.map(s => `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 1rem 0; font-size: 0.8rem;">#${s.id_venta}</td>
+                    <td style="font-size: 0.8rem;">${new Date(s.fecha_hora).toLocaleDateString()}</td>
+                    <td>${s.cliente_nombre || 'General'}</td>
+                    <td><span class="badge" style="background: #eee; color: #333">${s.canal_venta}</span></td>
+                    <td><span class="badge" style="background: ${s.estado === 'Pendiente' ? '#fff3e0' : '#e8f5e9'}; color: ${s.estado === 'Pendiente' ? '#e65100' : '#2e7d32'}">${s.estado}</span></td>
+                    <td style="font-weight: 700;">Bs. ${s.total_final}</td>
+                    <td><i class="fas fa-search-plus" style="color: var(--primary-green); cursor: pointer;" onclick="viewSaleDetail(${s.id_venta})"></i></td>
+                </tr>
+            `).join('');
+        }
+
+        function filterSales() {
+            const term = document.getElementById('searchSale').value.toLowerCase();
+            const filtered = allSales.filter(s => 
+                (s.cliente_nombre || 'General').toLowerCase().includes(term) ||
+                s.id_venta.toString().includes(term)
+            );
+            renderSales(filtered);
+        }
+
+        async function viewSaleDetail(id) {
+            try {
+                const sale = await api.get(`/sales/${id}`);
+                const content = document.getElementById('saleModalContent');
+                content.innerHTML = `
+                    <p><strong>Fecha:</strong> ${new Date(sale.fecha_hora).toLocaleString()}</p>
+                    <p><strong>Cliente:</strong> ${sale.cliente_nombre || 'S/N'}</p>
+                    <p><strong>Atendido por:</strong> ${sale.empleado_nombre || 'Sistema'}</p>
+                    <p><strong>Estado:</strong> ${sale.estado}</p>
+                    <h4 style="margin-top: 1rem;">Productos:</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        ${sale.items.map(item => `
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between;">
+                                <span>${item.cantidad}x ${item.producto_nombre}</span>
+                                <span>Bs. ${item.subtotal}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <div style="margin-top: 1rem; text-align: right; font-size: 1.2rem; font-weight: 800; color: var(--primary-green);">
+                        Total: Bs. ${sale.total_final}
+                    </div>
+                `;
+                document.getElementById('saleModal').classList.remove('hidden');
+            } catch (error) {
+                alert('Error al cargar detalle');
+            }
+        }
+
+        function closeSaleModal() {
+            document.getElementById('saleModal').classList.add('hidden');
+        }
+
+        function renderCustomers() {
+            const tableBody = document.getElementById('customersTableBody');
+            tableBody.innerHTML = allCustomers.map(c => `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 1rem 0;">${c.documento_identidad}</td>
+                    <td>${c.nombre}</td>
+                    <td style="font-weight: 700; color: var(--secondary-green);">${c.puntos_acumulados} pts</td>
+                    <td><span class="badge" style="background: var(--light-green); color: var(--primary-green)">${c.puntos_acumulados > 100 ? 'VIP' : 'Frecuente'}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderInventory() {
+            const prodList = document.getElementById('productsList');
+            prodList.innerHTML = allProducts.map(p => `
+                <div style="display: flex; justify-content: space-between; padding: 0.8rem; border-bottom: 1px solid #eee; align-items: center;">
+                    <div>
+                        <p style="font-weight: 600; font-size: 0.9rem;">${p.nombre}</p>
+                        <small style="color: #666;">${p.categoria_nombre}</small>
+                    </div>
+                    <span style="font-weight: 700; color: var(--primary-green);">Bs. ${p.precio_base}</span>
+                </div>
+            `).join('');
+
+            const flavorsList = document.getElementById('flavorsList');
+            flavorsList.innerHTML = allFlavors.map(f => `
+                <div style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px;">
+                        <span>${f.nombre}</span>
+                        <span style="font-weight: 700;">${(f.stock_gramos/1000).toFixed(1)} kg</span>
+                    </div>
+                    <div style="height: 10px; background: #eee; border-radius: 5px; overflow: hidden;">
+                        <div style="width: ${Math.min((f.stock_gramos/10000)*100, 100)}%; height: 100%; background: var(--secondary-green);"></div>
+                    </div>
+                </div>
+            `).join('');
         }
 
         loadDashboard();

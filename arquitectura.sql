@@ -13,6 +13,7 @@ DROP TYPE IF EXISTS tipo_contrato_enum, metodo_pago_enum, canal_venta_enum CASCA
 CREATE TYPE tipo_contrato_enum AS ENUM ('Medio Tiempo', 'Tiempo Completo');
 CREATE TYPE metodo_pago_enum AS ENUM ('Efectivo', 'Tarjeta');
 CREATE TYPE canal_venta_enum AS ENUM ('Local', 'Yango', 'PedidosYa');
+CREATE TYPE estado_venta_enum AS ENUM ('Pendiente', 'Pagada', 'Cancelada');
 
 -- Tablas maestras
 CREATE TABLE categorias (
@@ -27,7 +28,8 @@ CREATE TABLE productos (
     descripcion TEXT,
     precio_base NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (precio_base >= 0),
     es_propio BOOLEAN NOT NULL DEFAULT FALSE,
-    puntos_otorgados INT NOT NULL DEFAULT 0 CHECK (puntos_otorgados >= 0)
+    puntos_otorgados INT NOT NULL DEFAULT 0 CHECK (puntos_otorgados >= 0),
+    imagen_url TEXT
 );
 
 CREATE TABLE sabores (
@@ -88,7 +90,8 @@ CREATE TABLE ventas_cabecera (
     monto_base NUMERIC(10, 2) NOT NULL DEFAULT 0,
     comision_app NUMERIC(10, 2) DEFAULT 0,
     costo_envio NUMERIC(10, 2) DEFAULT 0,
-    total_final NUMERIC(10, 2) NOT NULL DEFAULT 0
+    total_final NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    estado estado_venta_enum NOT NULL DEFAULT 'Pagada'
 );
 
 CREATE TABLE ventas_detalle (

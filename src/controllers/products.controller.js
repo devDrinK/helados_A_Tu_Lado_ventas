@@ -33,6 +33,7 @@ exports.getProducts = async (req, res) => {
       ORDER BY p.nombre ASC
     `;
     const result = await db.query(query);
+    console.log(`[DB] Se encontraron ${result.rows.length} productos.`);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

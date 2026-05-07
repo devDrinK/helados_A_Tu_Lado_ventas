@@ -19,7 +19,7 @@ exports.getSales = async (req, res) => {
 exports.createSale = async (req, res) => {
   const { 
     id_cliente, id_empleado, id_turno, metodo_pago, canal_venta, 
-    comision_app, costo_envio, items 
+    comision_app, costo_envio, items, estado 
   } = req.body;
 
   const client = await db.pool.connect();
@@ -30,9 +30,9 @@ exports.createSale = async (req, res) => {
     // 1. Insertar Cabecera
     const resCabecera = await client.query(
       `INSERT INTO ventas_cabecera 
-       (id_cliente, id_empleado, id_turno, metodo_pago, canal_venta, comision_app, costo_envio) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [id_cliente, id_empleado, id_turno, metodo_pago, canal_venta, comision_app || 0, costo_envio || 0]
+       (id_cliente, id_empleado, id_turno, metodo_pago, canal_venta, comision_app, costo_envio, estado) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [id_cliente, id_empleado, id_turno, metodo_pago || 'Efectivo', canal_venta || 'Local', comision_app || 0, costo_envio || 0, estado || 'Pagada']
     );
     const id_venta = resCabecera.rows[0].id_venta;
 
@@ -99,6 +99,20 @@ exports.getSaleDetail = async (req, res) => {
       ...cabecera.rows[0],
       items: detalle.rows
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateSaleStatus = async (req, res) => {
+  const { id } = req.params;
+  const { estado, id_empleado } = req.body;
+  try {
+    const result = await db.query(
+      'UPDATE ventas_cabecera SET estado = $1, id_empleado = COALESCE($2, id_empleado) WHERE id_venta = $3 RETURNING *',
+      [estado, id_empleado, id]
+    );
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
