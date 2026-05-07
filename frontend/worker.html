@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         .pos-container { display: grid; grid-template-columns: 1fr 400px; gap: 2rem; height: calc(100vh - 150px); }
         .product-selection { overflow-y: auto; background: white; border-radius: 20px; padding: 1.5rem; box-shadow: var(--shadow); }
@@ -65,8 +66,14 @@
             <div class="cart-panel">
                 <h3 style="margin-bottom: 1rem; color: var(--primary-green);"><i class="fas fa-shopping-basket"></i> Pedido Actual</h3>
                 
-                <div style="margin-bottom: 1rem;">
-                    <input type="text" id="clientCI" placeholder="CI Cliente (opcional)" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: none; margin-bottom: 0.5rem;">
+                <div style="margin-bottom: 1rem; background: rgba(255,255,255,0.5); padding: 1rem; border-radius: 15px;">
+                    <p style="font-size: 0.8rem; margin-bottom: 10px; font-weight: 600;"><i class="fas fa-id-card"></i> Datos del Cliente</p>
+                    <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                        <input type="text" id="clientCI" placeholder="CI / NIT" onblur="searchClient()" style="flex: 1; padding: 0.6rem; border-radius: 8px; border: 1px solid #ddd;">
+                        <button class="btn btn-primary" onclick="searchClient()" style="padding: 0.5rem;"><i class="fas fa-search"></i></button>
+                    </div>
+                    <input type="text" id="clientName" placeholder="Nombre Completo (Razon Soc.)" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid #ddd;">
+                    <small id="clientStatus" style="font-size: 0.7rem; color: #666; margin-top: 5px; display: block;"></small>
                 </div>
 
                 <div id="cartItems" style="flex: 1; overflow-y: auto;">
@@ -112,7 +119,10 @@
             </div>
             <div style="text-align: center; border-top: 1px dashed #000; margin-top: 1rem; padding-top: 1rem;">
                 <p style="font-size: 0.8rem;">¡Gracias por preferir lo artesanal!</p>
-                <button class="btn btn-primary" onclick="closeInvoice()" style="margin-top: 1rem; font-family: 'Outfit', sans-serif;">Cerrar e Imprimir</button>
+                <div style="display: flex; gap: 10px; margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="downloadInvoicePDF()" style="flex: 1; background: var(--secondary-green);"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+                    <button class="btn btn-primary" onclick="closeInvoice()" style="flex: 1;">Cerrar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -241,6 +251,18 @@
             document.getElementById('invoiceModal').classList.remove('hidden');
         }
 
+        function downloadInvoicePDF() {
+            const element = document.getElementById('invoiceModal').querySelector('div');
+            const options = {
+                margin: 1,
+                filename: `factura_${Date.now()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf().set(options).from(element).save();
+        }
+
         function closeInvoice() {
             document.getElementById('invoiceModal').classList.add('hidden');
         }
@@ -276,38 +298,75 @@
             updateCartUI();
         }
 
+        async function searchClient() {
+            const ci = document.getElementById('clientCI').value;
+            const status = document.getElementById('clientStatus');
+            const nameInput = document.getElementById('clientName');
+            
+            if (!ci || ci === '0') {
+                status.textContent = 'Cliente General';
+                nameInput.value = 'SIN NOMBRE';
+                return;
+            }
+
+            status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+            try {
+                const customers = await api.get('/customers');
+                const customer = customers.find(c => c.documento_identidad === ci);
+                if (customer) {
+                    status.textContent = `✅ Encontrado: ${customer.puntos_acumulados} pts`;
+                    nameInput.value = customer.nombre;
+                } else {
+                    status.textContent = '❌ No encontrado. Ingresa nombre para registrar.';
+                }
+            } catch (error) {
+                status.textContent = 'Error al buscar.';
+            }
+        }
+
         async function processSale() {
             if (cart.length === 0) return alert('El carrito está vacío');
             
-            const ci = document.getElementById('clientCI').value;
+            const ci = document.getElementById('clientCI').value || '0';
+            const name = document.getElementById('clientName').value || 'SIN NOMBRE';
             let id_cliente = null;
 
-            if (ci) {
-                const customers = await api.get('/customers');
-                const customer = customers.find(c => c.documento_identidad === ci);
-                if (customer) id_cliente = customer.id_cliente;
-            }
-
-            const saleData = {
-                id_cliente,
-                id_empleado: 1, // Hardcoded for demo
-                id_turno: 1,    // Hardcoded for demo
-                metodo_pago: document.getElementById('metodoPago').value,
-                canal_venta: document.getElementById('canalVenta').value,
-                items: cart.map(item => ({
-                    id_producto: item.id_producto,
-                    cantidad: 1,
-                    precio_unitario: item.precio_base,
-                    sabores: [] // Simplificado para demo
-                }))
-            };
-
             try {
-                await api.post('/sales', saleData);
+                // 1. Gestionar Cliente
+                const customers = await api.get('/customers');
+                let customer = customers.find(c => c.documento_identidad === ci);
+                
+                if (!customer && ci !== '0') {
+                    // Registrar nuevo cliente
+                    customer = await api.post('/customers', { documento_identidad: ci, nombre: name });
+                }
+                
+                if (customer) id_cliente = customer.id_cliente;
+
+                const saleData = {
+                    id_cliente,
+                    id_empleado: 1, 
+                    id_turno: 1,    
+                    metodo_pago: document.getElementById('metodoPago').value,
+                    canal_venta: document.getElementById('canalVenta').value,
+                    items: cart.map(item => ({
+                        id_producto: item.id_producto,
+                        cantidad: 1,
+                        precio_unitario: item.precio_base
+                    }))
+                };
+
+                const res = await api.post('/sales', saleData);
+                const fullSale = await api.get(`/sales/${res.id_venta}`);
+                
+                showInvoice(fullSale);
+                
                 alert('¡Venta realizada con éxito!');
                 cart = [];
                 updateCartUI();
                 document.getElementById('clientCI').value = '';
+                document.getElementById('clientName').value = '';
+                document.getElementById('clientStatus').textContent = '';
             } catch (error) {
                 alert('Error al procesar venta: ' + error.message);
             }

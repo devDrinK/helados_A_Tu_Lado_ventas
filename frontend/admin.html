@@ -25,6 +25,7 @@
             <button id="btn-tab-stats" class="btn btn-primary tab-btn" onclick="showTab('stats')">Estadísticas</button>
             <button id="btn-tab-sales" class="btn tab-btn" style="background: var(--light-green); color: var(--primary-green);" onclick="showTab('sales')">Historial de Ventas</button>
             <button id="btn-tab-customers" class="btn tab-btn" style="background: var(--light-green); color: var(--primary-green);" onclick="showTab('customers')">Clientes</button>
+            <button id="btn-tab-employees" class="btn tab-btn" style="background: var(--light-green); color: var(--primary-green);" onclick="showTab('employees')">Personal</button>
             <button id="btn-tab-inventory" class="btn tab-btn" style="background: var(--light-green); color: var(--primary-green);" onclick="showTab('inventory')">Inventario y Stock</button>
         </div>
 
@@ -115,6 +116,29 @@
             </div>
         </div>
 
+        <!-- Section: Employees -->
+        <div id="section-employees" class="admin-section hidden">
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+                <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
+                    <h3>Registrar Personal</h3>
+                    <div style="margin-top: 1.5rem;">
+                        <input type="text" id="empName" placeholder="Nombre Completo" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 1rem;">
+                        <select id="empContract" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 1.5rem;">
+                            <option value="Tiempo Completo">Tiempo Completo</option>
+                            <option value="Medio Tiempo">Medio Tiempo</option>
+                        </select>
+                        <button class="btn btn-primary" style="width: 100%;" onclick="registerEmployee()">GUARDAR EMPLEADO</button>
+                    </div>
+                </div>
+                <div style="background: white; padding: 2rem; border-radius: 20px; box-shadow: var(--shadow);">
+                    <h3>Lista de Personal</h3>
+                    <div id="employeesGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+                        <!-- Employees cards go here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Section: Inventory -->
         <div id="section-inventory" class="admin-section hidden">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
@@ -144,6 +168,7 @@
     <script>
         let allSales = [];
         let allCustomers = [];
+        let allEmployees = [];
         let allProducts = [];
         let allFlavors = [];
 
@@ -167,12 +192,14 @@
             try {
                 allSales = await api.get('/sales');
                 allCustomers = await api.get('/customers');
+                allEmployees = await api.get('/employees');
                 allProducts = await api.get('/products');
                 allFlavors = await api.get('/products/flavors');
 
                 renderStats();
                 renderSales(allSales);
                 renderCustomers();
+                renderEmployees();
                 renderInventory();
             } catch (error) {
                 console.error('Error al cargar dashboard:', error);
@@ -268,6 +295,35 @@
                     <td><span class="badge" style="background: var(--light-green); color: var(--primary-green)">${c.puntos_acumulados > 100 ? 'VIP' : 'Frecuente'}</span></td>
                 </tr>
             `).join('');
+        }
+
+        function renderEmployees() {
+            const grid = document.getElementById('employeesGrid');
+            grid.innerHTML = allEmployees.map(e => `
+                <div class="role-card" style="padding: 1.2rem; text-align: left; border: 1px solid #eee; display: block;">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--primary-green);">${e.nombre_completo}</h4>
+                    <div style="font-size: 0.8rem; color: #666;">
+                        <p><i class="fas fa-file-contract"></i> ${e.tipo_contrato}</p>
+                        <p><i class="fas fa-calendar-alt"></i> Ingreso: ${new Date(e.fecha_ingreso).toLocaleDateString()}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function registerEmployee() {
+            const nombre = document.getElementById('empName').value;
+            const tipo_contrato = document.getElementById('empContract').value;
+
+            if (!nombre) return alert('Ingresa el nombre del empleado');
+
+            try {
+                await api.post('/employees', { nombre_completo: nombre, tipo_contrato });
+                alert('Empleado registrado con éxito');
+                document.getElementById('empName').value = '';
+                loadDashboard();
+            } catch (error) {
+                alert('Error al registrar: ' + error.message);
+            }
         }
 
         function renderInventory() {
